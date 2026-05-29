@@ -104,6 +104,13 @@ Generated output:
 - Keep the first versions offline-first and local-only.
 - Add concise comments for non-obvious behavior, especially Electron IPC boundaries, scheduler de-duplication, persistence migrations, and CSS drag regions. Avoid comments that merely restate simple assignments or JSX labels.
 
+## Git Commit Rules
+
+- Use Conventional Commits format for commit messages: `<type>(optional scope): <description>`.
+- Prefer common types such as `feat`, `fix`, `docs`, `style`, `refactor`, `test`, `build`, `chore`, and `ci`.
+- Keep the description concise, imperative, and lowercase unless a proper noun is required.
+- Examples: `feat(renderer): add click dialogue`, `fix(alarm): handle IME label input`, `docs: update agent notes`.
+
 ## Current Data Model
 
 `AppSettings` currently contains:
