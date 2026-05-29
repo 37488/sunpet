@@ -62,6 +62,7 @@ export const dialogues: DialogueLine[] = [
 export function pickDialogue(trigger: DialogueTrigger, language: 'zh-CN' | 'en-US') {
   const pool = dialogues.filter((line) => line.trigger.includes(trigger));
   const total = pool.reduce((sum, line) => sum + line.weight, 0);
+  // Weighted random keeps common lines frequent without removing rare personality lines.
   let cursor = Math.random() * total;
   for (const line of pool) {
     cursor -= line.weight;

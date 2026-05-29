@@ -26,6 +26,8 @@ select {
   height: 260px;
   padding: 8px;
   color: #332400;
+  /* Empty window space remains draggable while controls opt out below. */
+  -webkit-app-region: drag;
 }
 
 .speech {
@@ -66,7 +68,8 @@ select {
   background: radial-gradient(circle at 42% 36%, #fff46d 0 28%, #ffd428 48%, #ef9f00 100%);
   box-shadow: inset -10px -14px 0 rgba(171, 92, 0, 0.18), 0 18px 26px rgba(80, 50, 0, 0.2);
   cursor: grab;
-  -webkit-app-region: drag;
+  /* The pet must receive click events for interaction dialogue. */
+  -webkit-app-region: no-drag;
   animation: idle-bob 2.6s ease-in-out infinite;
 }
 
@@ -74,9 +77,12 @@ select {
   cursor: grabbing;
 }
 
+.pet,
 .pet-face,
-.quick-actions,
+.speech,
+.speech button,
 .settings-panel {
+  /* Electron drag regions swallow DOM events unless interactive areas opt out. */
   -webkit-app-region: no-drag;
 }
 
@@ -155,16 +161,19 @@ select {
   z-index: -1;
 }
 
-.quick-actions {
-  position: absolute;
-  right: 8px;
-  bottom: 8px;
-  display: flex;
-  gap: 4px;
+.settings-panel button {
+  border: 1px solid #735900;
+  border-radius: 999px;
+  background: #fff8bb;
+  color: #332400;
+  cursor: pointer;
+  font-size: 12px;
 }
 
-.quick-actions button,
-.settings-panel button {
+.speech button {
+  position: absolute;
+  right: 10px;
+  bottom: 7px;
   border: 1px solid #735900;
   border-radius: 999px;
   background: #fff8bb;

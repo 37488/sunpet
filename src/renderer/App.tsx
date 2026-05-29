@@ -21,19 +21,32 @@ export function App() {
   const [ready, setReady] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [speech, setSpeech] = useState('你好，我是 Sunpet。今天也请把桌面分我一点点。');
+  const [activeAlarm, setActiveAlarm] = useState<Alarm | null>(null);
   const [mood, setMood] = useState<PetMood>('happy');
   const [state, setState] = useState<PetState>('idle');
   const [now, setNow] = useState(formatTime(new Date()));
+  const [alarmLabelDrafts, setAlarmLabelDrafts] = useState<Record<string, string>>({});
+  const composingAlarmLabels = useRef(new Set<string>());
   const hideSpeechTimer = useRef<number | undefined>(undefined);
 
-  const say = (text: string, nextMood: PetMood = 'neutral', nextState: PetState = 'talking') => {
+  // Returning to a happy idle mood stops state-driven animations such as alarm shaking.
+  const clearSpeech = () => {
+    setSpeech('');
+    setActiveAlarm(null);
+    setMood('happy');
+    setState('idle');
+  };
+
+  const say = (text: string, nextMood: PetMood = 'neutral', nextState: PetState = 'talking', persistent = false) => {
     window.clearTimeout(hideSpeechTimer.current);
+    setActiveAlarm(null);
     setSpeech(text);
     setMood(nextMood);
     setState(nextState);
-    hideSpeechTimer.current = window.setTimeout(() => {
-      setState('idle');
-    }, 4200);
+    if (!persistent) {
+      // Normal chat should be temporary; persistent events such as alarms must be user-dismissed.
+      hideSpeechTimer.current = window.setTimeout(clearSpeech, 4200);
+    }
   };
 
   const saveSettings = async (next: AppSettings) => {
@@ -53,8 +66,14 @@ export function App() {
       say(payload.phrase, 'happy', 'talking');
     });
     const offAlarm = window.sunpet.onAlarm((payload) => {
-      say(`${payload.label || '提醒'} 到了：${payload.time}`, 'excited', 'alarm');
+      window.clearTimeout(hideSpeechTimer.current);
+      // Alarm UI is kept separate from normal speech so the cancel button is only shown while ringing.
+      setActiveAlarm({ id: payload.id, label: payload.label, time: payload.time, enabled: true });
+      setSpeech(`${payload.label || '提醒'} ${payload.time}`);
+      setMood('excited');
+      setState('alarm');
     });
+    hideSpeechTimer.current = window.setTimeout(clearSpeech, 4200);
 
     return () => {
       window.clearInterval(tick);
@@ -67,6 +86,7 @@ export function App() {
 
   useEffect(() => {
     if (!ready) return;
+    // Idle dialogue is local and timer-based; changing language or frequency restarts the interval.
     const interval = window.setInterval(() => {
       const picked = pickDialogue('idle', settings.language);
       say(picked.text, picked.mood);
@@ -84,19 +104,26 @@ export function App() {
     say(picked.text, picked.mood, 'dragged');
   };
 
-  const toggleMusic = () => {
-    const next = { ...settings, musicEnabled: !settings.musicEnabled };
-    void saveSettings(next);
-    const picked = pickDialogue('music', settings.language);
-    say(next.musicEnabled ? picked.text : '音乐先暂停。耳朵也需要休息。', 'happy', 'music');
-  };
-
   const addAlarm = () => {
     void saveSettings({ ...settings, alarms: [...settings.alarms, makeAlarm()] });
   };
 
   const updateAlarm = (alarm: Alarm) => {
+    // Replace a single alarm object to keep the renderer state immutable before persisting.
     void saveSettings({ ...settings, alarms: settings.alarms.map((item) => (item.id === alarm.id ? alarm : item)) });
+  };
+
+  const updateAlarmLabelDraft = (id: string, label: string) => {
+    setAlarmLabelDrafts((drafts) => ({ ...drafts, [id]: label }));
+  };
+
+  const commitAlarmLabel = (alarm: Alarm, label = alarmLabelDrafts[alarm.id] ?? alarm.label) => {
+    setAlarmLabelDrafts((drafts) => {
+      const next = { ...drafts };
+      delete next[alarm.id];
+      return next;
+    });
+    if (label !== alarm.label) updateAlarm({ ...alarm, label });
   };
 
   const removeAlarm = (id: string) => {
@@ -107,16 +134,19 @@ export function App() {
 
   return (
     <main className="app">
-      <section className={`speech speech-${state}`}>
-        <p>{speech}</p>
-        <span>{now}</span>
-      </section>
+      {speech && (
+        <section className={`speech speech-${state}`}>
+          <p>{speech}</p>
+          <span>{now}</span>
+          {activeAlarm && <button onClick={clearSpeech}>取消</button>}
+        </section>
+      )}
 
       <button
         className={`pet pet-${mood} pet-state-${state}`}
         aria-label="Sunpet"
         onClick={handlePetClick}
-        onMouseDown={handleDragStart}
+        onDoubleClick={handleDragStart}
       >
         <span className="pet-face">
           <span className="eye eye-left" />
@@ -126,12 +156,6 @@ export function App() {
         <span className="pet-stem" />
         <span className="pet-leaf" />
       </button>
-
-      <nav className="quick-actions">
-        <button onClick={() => window.sunpet.showSettings()}>设置</button>
-        <button onClick={toggleMusic}>{settings.musicEnabled ? '暂停' : 'BGM'}</button>
-        <button onClick={() => window.sunpet.closeApp()}>退出</button>
-      </nav>
 
       {settingsOpen && (
         <aside className="settings-panel">
@@ -173,7 +197,19 @@ export function App() {
             {settings.alarms.map((alarm) => (
               <div className="alarm-row" key={alarm.id}>
                 <input type="time" value={alarm.time} onChange={(event) => updateAlarm({ ...alarm, time: event.target.value })} />
-                <input value={alarm.label} onChange={(event) => updateAlarm({ ...alarm, label: event.target.value })} />
+                <input
+                  value={alarmLabelDrafts[alarm.id] ?? alarm.label}
+                  onChange={(event) => {
+                    updateAlarmLabelDraft(alarm.id, event.target.value);
+                    if (!composingAlarmLabels.current.has(alarm.id)) commitAlarmLabel(alarm, event.target.value);
+                  }}
+                  onCompositionStart={() => composingAlarmLabels.current.add(alarm.id)}
+                  onCompositionEnd={(event) => {
+                    composingAlarmLabels.current.delete(alarm.id);
+                    commitAlarmLabel(alarm, event.currentTarget.value);
+                  }}
+                  onBlur={() => commitAlarmLabel(alarm)}
+                />
                 <input type="checkbox" checked={alarm.enabled} onChange={(event) => updateAlarm({ ...alarm, enabled: event.target.checked })} />
                 <button onClick={() => removeAlarm(alarm.id)}>删</button>
               </div>

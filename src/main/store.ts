@@ -13,10 +13,12 @@ const store = new Store<StoreShape>({
 });
 
 export function getSettings(): AppSettings {
+  // Merge defaults on read so newly added settings get sane values for existing users.
   return { ...defaultSettings, ...store.get('settings') };
 }
 
 export function saveSettings(settings: AppSettings): AppSettings {
+  // Save the normalized shape back to disk to keep persisted data aligned with current defaults.
   const next = { ...defaultSettings, ...settings };
   store.set('settings', next);
   return next;

@@ -13,6 +13,7 @@ const devServerUrl = process.env.VITE_DEV_SERVER_URL;
 function createPetWindow() {
   const settings = getSettings();
   const display = screen.getPrimaryDisplay().workArea;
+  // Clamp restored coordinates so the small transparent window cannot reopen off-screen.
   const x = Math.min(Math.max(settings.petPosition.x, display.x), display.x + display.width - 280);
   const y = Math.min(Math.max(settings.petPosition.y, display.y), display.y + display.height - 260);
 
@@ -34,6 +35,7 @@ function createPetWindow() {
     },
   });
 
+  // The higher level keeps the pet visible above most normal app windows on Windows.
   petWindow.setAlwaysOnTop(true, 'screen-saver');
   petWindow.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true });
 
@@ -47,6 +49,7 @@ function createPetWindow() {
   petWindow.on('moved', () => {
     if (!petWindow) return;
     const [windowX, windowY] = petWindow.getPosition();
+    // Persist position from the main process because the renderer cannot read OS window bounds.
     saveSettings({ ...getSettings(), petPosition: { x: windowX, y: windowY } });
   });
 
@@ -56,6 +59,7 @@ function createPetWindow() {
 }
 
 function sendSettingsVisibility() {
+  // Settings live inside the pet renderer; tray and IPC actions only toggle this flag.
   petWindow?.webContents.send('settings:visibility', settingsVisible);
 }
 
@@ -70,6 +74,7 @@ app.whenReady().then(() => {
   );
   startScheduler(() => petWindow);
 
+  // Keep all Electron and persistence access behind IPC so React stays browser-only.
   ipcMain.handle('settings:get', () => getSettings());
   ipcMain.handle('settings:save', (_event, settings: AppSettings) => saveSettings(settings));
   ipcMain.handle('pet:position', (_event, position: AppSettings['petPosition']) => {

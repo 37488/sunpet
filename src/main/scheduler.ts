@@ -4,6 +4,7 @@ import type { AlarmPayload, ClockPayload } from '../shared/types';
 
 let timer: NodeJS.Timeout | undefined;
 let lastClockKey = '';
+// Avoid repeating the same clock/alarm event while the scheduler polls every second.
 const firedAlarmKeys = new Set<string>();
 
 function clockPhrase(hour: number, minute: number) {
@@ -24,6 +25,7 @@ export function startScheduler(windowProvider: () => BrowserWindow | null) {
     const now = new Date();
     const hour = now.getHours();
     const minute = now.getMinutes();
+    // This uses local wall-clock date semantics; alarms intentionally repeat daily.
     const dateKey = now.toISOString().slice(0, 10);
 
     if (settings.clockEnabled && minute === 0) {
@@ -37,6 +39,7 @@ export function startScheduler(windowProvider: () => BrowserWindow | null) {
 
     const time = `${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`;
     for (const alarm of settings.alarms) {
+      // Include the minute in the key so an enabled alarm can fire again on the next day.
       const key = `${dateKey}-${alarm.id}-${time}`;
       if (alarm.enabled && alarm.time === time && !firedAlarmKeys.has(key)) {
         firedAlarmKeys.add(key);

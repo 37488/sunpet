@@ -102,6 +102,7 @@ Generated output:
 - Persist user settings through `src/main/store.ts`; avoid adding ad hoc localStorage usage unless there is a clear reason.
 - Scheduler behavior belongs in `src/main/scheduler.ts`; renderer should only display clock/alarm events.
 - Keep the first versions offline-first and local-only.
+- Add concise comments for non-obvious behavior, especially Electron IPC boundaries, scheduler de-duplication, persistence migrations, and CSS drag regions. Avoid comments that merely restate simple assignments or JSX labels.
 
 ## Current Data Model
 
