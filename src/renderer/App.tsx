@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { defaultSettings } from '../shared/defaultSettings';
 import type { Alarm, AppSettings, PetMood, PetState } from '../shared/types';
 import { pickDialogue } from './dialogues';
+import { PetAvatar, petDefinitions } from './pets';
 
 function formatTime(date: Date) {
   return `${date.getHours().toString().padStart(2, '0')}:${date.getMinutes().toString().padStart(2, '0')}`;
@@ -142,20 +143,7 @@ export function App() {
         </section>
       )}
 
-      <button
-        className={`pet pet-${mood} pet-state-${state}`}
-        aria-label="Sunpet"
-        onClick={handlePetClick}
-        onDoubleClick={handleDragStart}
-      >
-        <span className="pet-face">
-          <span className="eye eye-left" />
-          <span className="eye eye-right" />
-          <span className="mouth" />
-        </span>
-        <span className="pet-stem" />
-        <span className="pet-leaf" />
-      </button>
+      <PetAvatar petId={settings.petId} mood={mood} state={state} onClick={handlePetClick} onDoubleClick={handleDragStart} />
 
       {settingsOpen && (
         <aside className="settings-panel">
@@ -169,6 +157,17 @@ export function App() {
             <select value={settings.language} onChange={(event) => void saveSettings({ ...settings, language: event.target.value as AppSettings['language'] })}>
               <option value="zh-CN">中文</option>
               <option value="en-US">English</option>
+            </select>
+          </label>
+
+          <label>
+            宠物形象
+            <select value={settings.petId} onChange={(event) => void saveSettings({ ...settings, petId: event.target.value as AppSettings['petId'] })}>
+              {petDefinitions.map((pet) => (
+                <option value={pet.id} key={pet.id}>
+                  {pet.name[settings.language]}
+                </option>
+              ))}
             </select>
           </label>
 

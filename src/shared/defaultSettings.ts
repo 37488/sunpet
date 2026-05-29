@@ -2,6 +2,7 @@ import type { AppSettings } from './types';
 
 export const defaultSettings: AppSettings = {
   language: 'zh-CN',
+  petId: 'sunny-sprout',
   chatFrequencyMinutes: 3,
   clockEnabled: true,
   musicEnabled: false,

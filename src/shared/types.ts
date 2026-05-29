@@ -2,6 +2,8 @@ export type PetMood = 'neutral' | 'happy' | 'sleepy' | 'excited' | 'annoyed';
 
 export type PetState = 'idle' | 'talking' | 'dragged' | 'alarm' | 'music';
 
+export type PetId = 'sunny-sprout' | 'moon-bun' | 'starlit-mira';
+
 export type DialogueTrigger = 'idle' | 'click' | 'clock' | 'alarm' | 'music' | 'drag';
 
 export type Alarm = {
@@ -13,6 +15,7 @@ export type Alarm = {
 
 export type AppSettings = {
   language: 'zh-CN' | 'en-US';
+  petId: PetId;
   chatFrequencyMinutes: number;
   clockEnabled: boolean;
   musicEnabled: boolean;

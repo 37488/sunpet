@@ -1,0 +1,64 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 420" role="img" aria-labelledby="title desc">
+  <title id="title">Starlit Mira</title>
+  <desc id="desc">An original six-head anime girl desktop pet with navy hair and a star-themed outfit.</desc>
+  <defs>
+    <linearGradient id="hair" x1="0" x2="1" y1="0" y2="1">
+      <stop offset="0" stop-color="#27305f" />
+      <stop offset="0.58" stop-color="#5560a8" />
+      <stop offset="1" stop-color="#8d83d9" />
+    </linearGradient>
+    <linearGradient id="dress" x1="0" x2="0" y1="0" y2="1">
+      <stop offset="0" stop-color="#fff6a5" />
+      <stop offset="0.44" stop-color="#f5a6c7" />
+      <stop offset="1" stop-color="#8e7be4" />
+    </linearGradient>
+    <linearGradient id="boot" x1="0" x2="0" y1="0" y2="1">
+      <stop offset="0" stop-color="#5a4b9c" />
+      <stop offset="1" stop-color="#2f285f" />
+    </linearGradient>
+    <filter id="softShadow" x="-30%" y="-20%" width="160%" height="150%">
+      <feDropShadow dx="0" dy="10" stdDeviation="9" flood-color="#24325d" flood-opacity="0.25" />
+    </filter>
+  </defs>
+
+  <ellipse cx="121" cy="399" rx="58" ry="13" fill="#263056" opacity="0.2" />
+  <g filter="url(#softShadow)">
+    <path d="M61 94c-16 38-6 119-18 172-6 27-17 42-24 54 40 5 72-6 91-29 19 25 54 37 94 29-9-14-20-33-24-63-8-59 5-121-18-163-19-34-79-36-101 0Z" fill="url(#hair)" />
+    <path d="M73 52c-8 18-19 29-34 34 17 8 38 5 55-9L73 52Z" fill="#f3d86d" />
+    <path d="M167 53c8 18 18 30 34 34-17 8-39 4-55-10l21-24Z" fill="#f3d86d" />
+
+    <path d="M86 64c-23 15-28 53-16 82 10 24 30 38 52 38 23 0 43-14 52-38 11-30 6-68-17-82-21-13-50-14-71 0Z" fill="#ffe1cf" />
+    <path d="M68 107c6-43 29-65 57-66 27-1 49 17 55 62-20-15-36-40-42-51-15 27-39 43-70 55Z" fill="url(#hair)" />
+    <path d="M79 121c-9-5-18 1-17 12 1 10 11 17 20 13l-3-25Z" fill="#ffd2c3" />
+    <path d="M161 121c9-5 18 1 17 12-1 10-11 17-20 13l3-25Z" fill="#ffd2c3" />
+
+    <ellipse cx="100" cy="124" rx="8" ry="13" fill="#293057" />
+    <ellipse cx="141" cy="124" rx="8" ry="13" fill="#293057" />
+    <circle cx="103" cy="119" r="3" fill="#fff" />
+    <circle cx="144" cy="119" r="3" fill="#fff" />
+    <path d="M112 147c8 7 18 7 26 0" fill="none" stroke="#ae5e6c" stroke-width="4" stroke-linecap="round" />
+    <ellipse cx="85" cy="142" rx="10" ry="5" fill="#ff9faf" opacity="0.62" />
+    <ellipse cx="156" cy="142" rx="10" ry="5" fill="#ff9faf" opacity="0.62" />
+
+    <path d="M109 178h25l8 35h-41l8-35Z" fill="#ffd9c9" />
+    <path d="M80 213c7-31 22-48 41-48 20 0 36 17 43 48l-19 72H98l-18-72Z" fill="url(#dress)" />
+    <path d="M98 190c14 10 30 10 45 0l6 20c-19 12-38 12-57 0l6-20Z" fill="#fff7c9" />
+    <path d="M79 213c-19 9-30 27-37 53l18 7c8-25 18-37 30-43l-11-17Z" fill="#ffe1cf" />
+    <path d="M164 213c18 9 30 27 37 53l-18 7c-8-25-18-37-30-43l11-17Z" fill="#ffe1cf" />
+    <circle cx="52" cy="271" r="8" fill="#ffe1cf" />
+    <circle cx="191" cy="271" r="8" fill="#ffe1cf" />
+
+    <path d="M95 271c-11 20-18 42-22 67h97c-4-25-12-48-23-67H95Z" fill="#6f63cc" />
+    <path d="M73 338c20 12 78 13 97 0l11 28c-34 13-84 12-119 0l11-28Z" fill="#fff0a9" />
+    <path d="M99 360l-10 34h24l5-35-19 1Z" fill="#ffe1cf" />
+    <path d="M144 360l9 34h-24l-5-35 20 1Z" fill="#ffe1cf" />
+    <path d="M85 390h32c3 9-3 16-16 16H76c-2-7 1-13 9-16Z" fill="url(#boot)" />
+    <path d="M125 390h32c8 3 11 9 9 16h-25c-13 0-19-7-16-16Z" fill="url(#boot)" />
+
+    <path d="M121 199l6 11 13 2-10 8 3 13-12-6-12 6 3-13-10-8 13-2 6-11Z" fill="#fff7ad" />
+    <circle cx="72" cy="88" r="3" fill="#fff4a1" />
+    <circle cx="174" cy="88" r="3" fill="#fff4a1" />
+    <circle cx="91" cy="74" r="2" fill="#fff4a1" />
+    <circle cx="153" cy="73" r="2" fill="#fff4a1" />
+  </g>
+</svg>
