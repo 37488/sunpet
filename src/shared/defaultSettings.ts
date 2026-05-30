@@ -6,6 +6,7 @@ export const defaultSettings: AppSettings = {
   chatFrequencyMinutes: 3,
   clockEnabled: true,
   musicEnabled: false,
+  voiceEnabled: false,
   volume: 0.4,
   petPosition: { x: 120, y: 160 },
   alarms: [],

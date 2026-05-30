@@ -19,6 +19,7 @@ export type AppSettings = {
   chatFrequencyMinutes: number;
   clockEnabled: boolean;
   musicEnabled: boolean;
+  voiceEnabled: boolean;
   volume: number;
   petPosition: { x: number; y: number };
   alarms: Alarm[];

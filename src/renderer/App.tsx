@@ -17,6 +17,12 @@ function makeAlarm(): Alarm {
   };
 }
 
+function pickSystemVoice(language: AppSettings['language']) {
+  const voices = window.speechSynthesis.getVoices();
+  const languagePrefix = language.split('-')[0];
+  return voices.find((voice) => voice.lang === language) ?? voices.find((voice) => voice.lang.startsWith(languagePrefix)) ?? null;
+}
+
 export function App() {
   const [settings, setSettings] = useState<AppSettings>(defaultSettings);
   const [ready, setReady] = useState(false);
@@ -30,9 +36,34 @@ export function App() {
   const composingAlarmLabels = useRef(new Set<string>());
   const hideSpeechTimer = useRef<number | undefined>(undefined);
   const musicEnabledRef = useRef(defaultSettings.musicEnabled);
+  const voiceSettingsRef = useRef({
+    enabled: defaultSettings.voiceEnabled,
+    language: defaultSettings.language,
+    volume: defaultSettings.volume,
+  });
+
+  const stopVoice = () => {
+    if ('speechSynthesis' in window) window.speechSynthesis.cancel();
+  };
+
+  const speakText = (text: string) => {
+    const voiceSettings = voiceSettingsRef.current;
+    if (!voiceSettings.enabled || !text || !('speechSynthesis' in window) || !('SpeechSynthesisUtterance' in window)) return;
+
+    window.speechSynthesis.cancel();
+    const utterance = new SpeechSynthesisUtterance(text);
+    utterance.lang = voiceSettings.language;
+    utterance.volume = Math.min(1, Math.max(0, voiceSettings.volume));
+    utterance.rate = voiceSettings.language === 'zh-CN' ? 0.95 : 1;
+    utterance.pitch = 1.05;
+    const voice = pickSystemVoice(voiceSettings.language);
+    if (voice) utterance.voice = voice;
+    window.speechSynthesis.speak(utterance);
+  };
 
   // Returning to the resting state stops temporary animations such as alarm shaking.
   const clearSpeech = () => {
+    stopVoice();
     setSpeech('');
     setActiveAlarm(null);
     setMood('happy');
@@ -45,6 +76,7 @@ export function App() {
     setSpeech(text);
     setMood(nextMood);
     setState(nextState);
+    speakText(text);
     if (!persistent) {
       // Normal chat should be temporary; persistent events such as alarms must be user-dismissed.
       hideSpeechTimer.current = window.setTimeout(clearSpeech, 4200);
@@ -74,12 +106,14 @@ export function App() {
       setSpeech(`${payload.label || '提醒'} ${payload.time}`);
       setMood('excited');
       setState('alarm');
+      speakText(`${payload.label || '提醒'} ${payload.time}`);
     });
     hideSpeechTimer.current = window.setTimeout(clearSpeech, 4200);
 
     return () => {
       window.clearInterval(tick);
       window.clearTimeout(hideSpeechTimer.current);
+      stopVoice();
       offSettings();
       offClock();
       offAlarm();
@@ -101,6 +135,15 @@ export function App() {
     if (!speech && !activeAlarm) setState(settings.musicEnabled ? 'music' : 'idle');
   }, [activeAlarm, settings.musicEnabled, speech]);
 
+  useEffect(() => {
+    voiceSettingsRef.current = {
+      enabled: settings.voiceEnabled,
+      language: settings.language,
+      volume: settings.volume,
+    };
+    if (!settings.voiceEnabled) stopVoice();
+  }, [settings.language, settings.voiceEnabled, settings.volume]);
+
   const handlePetClick = () => {
     const picked = pickDialogue('click', settings.language);
     say(picked.text, picked.mood);
@@ -118,6 +161,7 @@ export function App() {
     setSpeech(picked.text);
     setMood(picked.mood);
     setState('dragged');
+    speakText(picked.text);
   };
 
   const handlePetDragEnd = () => {
@@ -224,6 +268,11 @@ export function App() {
           <label className="checkbox-row">
             <input type="checkbox" checked={settings.musicEnabled} onChange={(event) => void saveSettings({ ...settings, musicEnabled: event.target.checked })} />
             音乐模式
+          </label>
+
+          <label className="checkbox-row">
+            <input type="checkbox" checked={settings.voiceEnabled} onChange={(event) => void saveSettings({ ...settings, voiceEnabled: event.target.checked })} />
+            语音朗读
           </label>
 
           <section className="alarms">
