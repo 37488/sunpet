@@ -1,5 +1,5 @@
 import type { PetId, PetMood, PetState } from '../shared/types';
-import { useEffect, useState, type ReactElement } from 'react';
+import { useEffect, useRef, useState, type PointerEvent, type ReactElement } from 'react';
 
 const starlitMiraFrameModules = import.meta.glob<string>('./assets/pets/starlit-mira/*.png', {
   eager: true,
@@ -131,13 +131,26 @@ type PetAvatarProps = {
   state: PetState;
   onClick: () => void;
   onDoubleClick: () => void;
+  onContextMenu: () => void;
+  onDragStart: () => void;
+  onDragEnd: () => void;
 };
 
-export function PetAvatar({ petId, mood, state, onClick, onDoubleClick }: PetAvatarProps) {
+export function PetAvatar({ petId, mood, state, onClick, onDoubleClick, onContextMenu, onDragStart, onDragEnd }: PetAvatarProps) {
   const pet = getPetDefinition(petId);
   const className = `pet pet-mode-${pet.mode} ${pet.className} pet-${mood} pet-state-${state}`;
   const frames = pet.mode === 'image' ? pet.frames[state] : [];
   const [frameIndex, setFrameIndex] = useState(0);
+  const pointer = useRef({
+    active: false,
+    dragging: false,
+    pointerId: 0,
+    startX: 0,
+    startY: 0,
+    lastX: 0,
+    lastY: 0,
+  });
+  const suppressClick = useRef(false);
 
   useEffect(() => {
     setFrameIndex(0);
@@ -152,9 +165,75 @@ export function PetAvatar({ petId, mood, state, onClick, onDoubleClick }: PetAva
     return () => window.clearInterval(timer);
   }, [frames.length, pet, state]);
 
+  const handlePointerDown = (event: PointerEvent<HTMLButtonElement>) => {
+    if (event.button !== 0) return;
+    pointer.current = {
+      active: true,
+      dragging: false,
+      pointerId: event.pointerId,
+      startX: event.screenX,
+      startY: event.screenY,
+      lastX: event.screenX,
+      lastY: event.screenY,
+    };
+    event.currentTarget.setPointerCapture(event.pointerId);
+  };
+
+  const handlePointerMove = (event: PointerEvent<HTMLButtonElement>) => {
+    const current = pointer.current;
+    if (!current.active || current.pointerId !== event.pointerId) return;
+
+    const totalX = event.screenX - current.startX;
+    const totalY = event.screenY - current.startY;
+    if (!current.dragging && Math.hypot(totalX, totalY) < 4) return;
+
+    if (!current.dragging) {
+      current.dragging = true;
+      suppressClick.current = true;
+      onDragStart();
+    }
+
+    const deltaX = event.screenX - current.lastX;
+    const deltaY = event.screenY - current.lastY;
+    current.lastX = event.screenX;
+    current.lastY = event.screenY;
+    if (deltaX !== 0 || deltaY !== 0) void window.sunpet.movePetBy({ x: deltaX, y: deltaY });
+  };
+
+  const finishPointer = (event: PointerEvent<HTMLButtonElement>) => {
+    const current = pointer.current;
+    if (!current.active || current.pointerId !== event.pointerId) return;
+    if (current.dragging) onDragEnd();
+    pointer.current.active = false;
+    event.currentTarget.releasePointerCapture(event.pointerId);
+  };
+
+  const handleClick = () => {
+    if (suppressClick.current) {
+      suppressClick.current = false;
+      return;
+    }
+    onClick();
+  };
+
+  const handleContextMenu = (event: PointerEvent<HTMLButtonElement>) => {
+    event.preventDefault();
+    onContextMenu();
+  };
+
   if (pet.mode === 'image') {
     return (
-      <button className={className} aria-label={pet.name['en-US']} onClick={onClick} onDoubleClick={onDoubleClick}>
+      <button
+        className={className}
+        aria-label={pet.name['en-US']}
+        onClick={handleClick}
+        onContextMenu={handleContextMenu}
+        onDoubleClick={onDoubleClick}
+        onPointerCancel={finishPointer}
+        onPointerDown={handlePointerDown}
+        onPointerMove={handlePointerMove}
+        onPointerUp={finishPointer}
+      >
         <img className="pet-image" src={frames[frameIndex % frames.length]} alt="" draggable={false} />
       </button>
     );
@@ -164,8 +243,13 @@ export function PetAvatar({ petId, mood, state, onClick, onDoubleClick }: PetAva
     <button
       className={className}
       aria-label={pet.name['en-US']}
-      onClick={onClick}
+      onClick={handleClick}
+      onContextMenu={handleContextMenu}
       onDoubleClick={onDoubleClick}
+      onPointerCancel={finishPointer}
+      onPointerDown={handlePointerDown}
+      onPointerMove={handlePointerMove}
+      onPointerUp={finishPointer}
     >
       {pet.render()}
     </button>

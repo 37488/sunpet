@@ -72,6 +72,7 @@ select {
   background: radial-gradient(circle at 42% 36%, #fff46d 0 28%, #ffd428 48%, #ef9f00 100%);
   box-shadow: inset -10px -14px 0 rgba(171, 92, 0, 0.18), 0 18px 26px rgba(80, 50, 0, 0.2);
   cursor: grab;
+  touch-action: none;
   /* The pet must receive click events for interaction dialogue. */
   -webkit-app-region: no-drag;
   animation: idle-bob 2.6s ease-in-out infinite;
@@ -91,6 +92,7 @@ select {
   max-width: none;
   pointer-events: none;
   transform: translateX(-50%);
+  -webkit-user-drag: none;
 }
 
 .pet-skin-sunny-sprout {
@@ -132,6 +134,11 @@ select {
 
 .pet:active {
   cursor: grabbing;
+}
+
+.pet:focus,
+.pet:focus-visible {
+  outline: none;
 }
 
 .pet,

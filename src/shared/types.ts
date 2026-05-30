@@ -24,6 +24,11 @@ export type AppSettings = {
   alarms: Alarm[];
 };
 
+export type PetMoveDelta = {
+  x: number;
+  y: number;
+};
+
 export type DialogueLine = {
   id: string;
   trigger: DialogueTrigger[];
@@ -48,6 +53,7 @@ export type SunpetApi = {
   getSettings: () => Promise<AppSettings>;
   saveSettings: (settings: AppSettings) => Promise<AppSettings>;
   setPetPosition: (position: AppSettings['petPosition']) => Promise<AppSettings>;
+  movePetBy: (delta: PetMoveDelta) => Promise<AppSettings | undefined>;
   showSettings: () => Promise<void>;
   hideSettings: () => Promise<void>;
   closeApp: () => Promise<void>;

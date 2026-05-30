@@ -1,11 +1,12 @@
 import { contextBridge, ipcRenderer } from 'electron';
-import type { AlarmPayload, AppSettings, ClockPayload, SunpetApi } from '../shared/types';
+import type { AlarmPayload, AppSettings, ClockPayload, PetMoveDelta, SunpetApi } from '../shared/types';
 
 // This is the only renderer-visible bridge to Electron APIs; keep it narrow and typed.
 const api: SunpetApi & { onSettingsVisibility: (callback: (visible: boolean) => void) => () => void } = {
   getSettings: () => ipcRenderer.invoke('settings:get'),
   saveSettings: (settings: AppSettings) => ipcRenderer.invoke('settings:save', settings),
   setPetPosition: (position: AppSettings['petPosition']) => ipcRenderer.invoke('pet:position', position),
+  movePetBy: (delta: PetMoveDelta) => ipcRenderer.invoke('pet:move-by', delta),
   showSettings: () => ipcRenderer.invoke('settings:show'),
   hideSettings: () => ipcRenderer.invoke('settings:hide'),
   closeApp: () => ipcRenderer.invoke('app:close'),

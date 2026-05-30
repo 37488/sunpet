@@ -111,6 +111,25 @@ export function App() {
     say(picked.text, picked.mood, 'dragged');
   };
 
+  const handlePetDragStart = () => {
+    if (activeAlarm) return;
+    const picked = pickDialogue('drag', settings.language);
+    window.clearTimeout(hideSpeechTimer.current);
+    setSpeech(picked.text);
+    setMood(picked.mood);
+    setState('dragged');
+  };
+
+  const handlePetDragEnd = () => {
+    if (activeAlarm) return;
+    setState(musicEnabledRef.current ? 'music' : 'idle');
+    hideSpeechTimer.current = window.setTimeout(clearSpeech, 1600);
+  };
+
+  const handlePetContextMenu = () => {
+    void window.sunpet.showSettings();
+  };
+
   const addAlarm = () => {
     void saveSettings({ ...settings, alarms: [...settings.alarms, makeAlarm()] });
   };
@@ -149,7 +168,16 @@ export function App() {
         </section>
       )}
 
-      <PetAvatar petId={settings.petId} mood={mood} state={state} onClick={handlePetClick} onDoubleClick={handleDragStart} />
+      <PetAvatar
+        petId={settings.petId}
+        mood={mood}
+        state={state}
+        onClick={handlePetClick}
+        onContextMenu={handlePetContextMenu}
+        onDoubleClick={handleDragStart}
+        onDragEnd={handlePetDragEnd}
+        onDragStart={handlePetDragStart}
+      />
 
       {settingsOpen && (
         <aside className="settings-panel">

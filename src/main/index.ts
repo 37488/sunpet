@@ -3,10 +3,11 @@ import path from 'path';
 import { createTray } from './tray';
 import { getSettings, saveSettings } from './store';
 import { startScheduler, stopScheduler } from './scheduler';
-import type { AppSettings } from '../shared/types';
+import type { AppSettings, PetMoveDelta } from '../shared/types';
 
 let petWindow: BrowserWindow | null = null;
 let settingsVisible = false;
+let positionSaveTimer: NodeJS.Timeout | undefined;
 
 const devServerUrl = process.env.VITE_DEV_SERVER_URL;
 
@@ -47,10 +48,8 @@ function createPetWindow() {
   }
 
   petWindow.on('moved', () => {
-    if (!petWindow) return;
-    const [windowX, windowY] = petWindow.getPosition();
     // Persist position from the main process because the renderer cannot read OS window bounds.
-    saveSettings({ ...getSettings(), petPosition: { x: windowX, y: windowY } });
+    savePetWindowPositionSoon();
   });
 
   petWindow.on('closed', () => {
@@ -61,6 +60,25 @@ function createPetWindow() {
 function sendSettingsVisibility() {
   // Settings live inside the pet renderer; tray and IPC actions only toggle this flag.
   petWindow?.webContents.send('settings:visibility', settingsVisible);
+}
+
+function savePetWindowPosition() {
+  if (!petWindow) return;
+  const [windowX, windowY] = petWindow.getPosition();
+  saveSettings({ ...getSettings(), petPosition: { x: windowX, y: windowY } });
+}
+
+function savePetWindowPositionSoon() {
+  if (positionSaveTimer) clearTimeout(positionSaveTimer);
+  positionSaveTimer = setTimeout(savePetWindowPosition, 160);
+}
+
+function clampWindowPosition(x: number, y: number) {
+  const display = screen.getDisplayMatching({ x, y, width: 280, height: 260 }).workArea;
+  return {
+    x: Math.min(Math.max(x, display.x), display.x + display.width - 280),
+    y: Math.min(Math.max(y, display.y), display.y + display.height - 260),
+  };
 }
 
 app.whenReady().then(() => {
@@ -80,6 +98,13 @@ app.whenReady().then(() => {
   ipcMain.handle('pet:position', (_event, position: AppSettings['petPosition']) => {
     return saveSettings({ ...getSettings(), petPosition: position });
   });
+  ipcMain.handle('pet:move-by', (_event, delta: PetMoveDelta) => {
+    if (!petWindow || petWindow.isDestroyed()) return undefined;
+    const [windowX, windowY] = petWindow.getPosition();
+    const next = clampWindowPosition(windowX + Math.round(delta.x), windowY + Math.round(delta.y));
+    petWindow.setPosition(next.x, next.y);
+    return { ...getSettings(), petPosition: next };
+  });
   ipcMain.handle('settings:show', () => {
     settingsVisible = true;
     sendSettingsVisibility();
@@ -96,5 +121,7 @@ app.on('window-all-closed', () => {
 });
 
 app.on('before-quit', () => {
+  if (positionSaveTimer) clearTimeout(positionSaveTimer);
+  savePetWindowPosition();
   stopScheduler();
 });
