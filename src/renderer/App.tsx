@@ -29,13 +29,14 @@ export function App() {
   const [alarmLabelDrafts, setAlarmLabelDrafts] = useState<Record<string, string>>({});
   const composingAlarmLabels = useRef(new Set<string>());
   const hideSpeechTimer = useRef<number | undefined>(undefined);
+  const musicEnabledRef = useRef(defaultSettings.musicEnabled);
 
-  // Returning to a happy idle mood stops state-driven animations such as alarm shaking.
+  // Returning to the resting state stops temporary animations such as alarm shaking.
   const clearSpeech = () => {
     setSpeech('');
     setActiveAlarm(null);
     setMood('happy');
-    setState('idle');
+    setState(musicEnabledRef.current ? 'music' : 'idle');
   };
 
   const say = (text: string, nextMood: PetMood = 'neutral', nextState: PetState = 'talking', persistent = false) => {
@@ -94,6 +95,11 @@ export function App() {
     }, Math.max(1, settings.chatFrequencyMinutes) * 60 * 1000);
     return () => window.clearInterval(interval);
   }, [ready, settings.chatFrequencyMinutes, settings.language]);
+
+  useEffect(() => {
+    musicEnabledRef.current = settings.musicEnabled;
+    if (!speech && !activeAlarm) setState(settings.musicEnabled ? 'music' : 'idle');
+  }, [activeAlarm, settings.musicEnabled, speech]);
 
   const handlePetClick = () => {
     const picked = pickDialogue('click', settings.language);
@@ -185,6 +191,11 @@ export function App() {
           <label className="checkbox-row">
             <input type="checkbox" checked={settings.clockEnabled} onChange={(event) => void saveSettings({ ...settings, clockEnabled: event.target.checked })} />
             整点报时
+          </label>
+
+          <label className="checkbox-row">
+            <input type="checkbox" checked={settings.musicEnabled} onChange={(event) => void saveSettings({ ...settings, musicEnabled: event.target.checked })} />
+            音乐模式
           </label>
 
           <section className="alarms">

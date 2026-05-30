@@ -32,6 +32,7 @@ select {
 
 .speech {
   position: absolute;
+  z-index: 3;
   top: 4px;
   left: 12px;
   right: 12px;
@@ -59,6 +60,7 @@ select {
 
 .pet {
   position: absolute;
+  z-index: 1;
   left: 78px;
   top: 92px;
   width: 128px;
@@ -102,18 +104,30 @@ select {
 }
 
 .pet-skin-starlit-mira {
-  left: 66px;
-  top: 72px;
-  width: 152px;
-  height: 168px;
+  left: 92px;
+  top: 76px;
+  width: 96px;
+  height: 176px;
+}
+
+.pet-skin-starlit-mira .pet-image {
+  width: 100%;
 }
 
 .pet-skin-starlit-mira.pet-state-talking .pet-image {
   animation: image-talk 480ms ease-in-out infinite;
 }
 
+.pet-skin-starlit-mira.pet-state-dragged .pet-image {
+  animation: image-dragged 180ms ease-in-out infinite;
+}
+
 .pet-skin-starlit-mira.pet-state-alarm .pet-image {
   animation: image-alarm 240ms ease-in-out infinite;
+}
+
+.pet-skin-starlit-mira.pet-state-music .pet-image {
+  animation: image-music 520ms ease-in-out infinite;
 }
 
 .pet:active {
@@ -342,9 +356,19 @@ select {
   50% { transform: translateX(-50%) scaleY(1.025); }
 }
 
+@keyframes image-dragged {
+  0%, 100% { transform: translateX(-50%) rotate(-2deg); }
+  50% { transform: translateX(-50%) rotate(2deg); }
+}
+
 @keyframes image-alarm {
   0%, 100% { transform: translateX(-50%) rotate(-2deg); }
   50% { transform: translateX(-50%) rotate(2deg); }
+}
+
+@keyframes image-music {
+  0%, 100% { transform: translateX(-50%) translateY(0); }
+  50% { transform: translateX(-50%) translateY(-4px); }
 }
 
 @keyframes bubble-in {

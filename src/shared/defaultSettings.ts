@@ -2,7 +2,7 @@ import type { AppSettings } from './types';
 
 export const defaultSettings: AppSettings = {
   language: 'zh-CN',
-  petId: 'sunny-sprout',
+  petId: 'starlit-mira',
   chatFrequencyMinutes: 3,
   clockEnabled: true,
   musicEnabled: false,
