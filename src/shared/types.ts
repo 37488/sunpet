@@ -6,6 +6,8 @@ export type PetId = 'sunny-sprout' | 'moon-bun' | 'starlit-mira';
 
 export type DialogueTrigger = 'idle' | 'click' | 'clock' | 'alarm' | 'music' | 'drag';
 
+export type DialogueClickLevel = 'single' | 'repeat' | 'many';
+
 export type Alarm = {
   id: string;
   time: string;
@@ -33,6 +35,8 @@ export type PetMoveDelta = {
 export type DialogueLine = {
   id: string;
   trigger: DialogueTrigger[];
+  petId?: PetId;
+  clickLevel?: DialogueClickLevel;
   text: Record<AppSettings['language'], string>;
   mood: PetMood;
   weight: number;

@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { defaultSettings } from '../shared/defaultSettings';
-import type { Alarm, AppSettings, PetMood, PetState } from '../shared/types';
+import type { Alarm, AppSettings, DialogueClickLevel, PetMood, PetState } from '../shared/types';
 import { pickDialogue } from './dialogues';
 import { PetAvatar, petDefinitions } from './pets';
 
@@ -35,6 +35,8 @@ export function App() {
   const [alarmLabelDrafts, setAlarmLabelDrafts] = useState<Record<string, string>>({});
   const composingAlarmLabels = useRef(new Set<string>());
   const hideSpeechTimer = useRef<number | undefined>(undefined);
+  const recentDialogueIds = useRef<string[]>([]);
+  const clickBurst = useRef<{ count: number; lastAt: number; resetTimer?: number }>({ count: 0, lastAt: 0 });
   const musicEnabledRef = useRef(defaultSettings.musicEnabled);
   const voiceSettingsRef = useRef({
     enabled: defaultSettings.voiceEnabled,
@@ -83,6 +85,26 @@ export function App() {
     }
   };
 
+  const rememberDialogue = (id: string) => {
+    recentDialogueIds.current = [id, ...recentDialogueIds.current.filter((recentId) => recentId !== id)].slice(0, 5);
+  };
+
+  const getClickLevel = (): DialogueClickLevel => {
+    const nowMs = Date.now();
+    if (nowMs - clickBurst.current.lastAt > 1800) clickBurst.current.count = 0;
+    clickBurst.current.count += 1;
+    clickBurst.current.lastAt = nowMs;
+
+    window.clearTimeout(clickBurst.current.resetTimer);
+    clickBurst.current.resetTimer = window.setTimeout(() => {
+      clickBurst.current.count = 0;
+    }, 2200);
+
+    if (clickBurst.current.count >= 5) return 'many';
+    if (clickBurst.current.count >= 2) return 'repeat';
+    return 'single';
+  };
+
   const saveSettings = async (next: AppSettings) => {
     const saved = await window.sunpet.saveSettings(next);
     setSettings(saved);
@@ -113,6 +135,7 @@ export function App() {
     return () => {
       window.clearInterval(tick);
       window.clearTimeout(hideSpeechTimer.current);
+      window.clearTimeout(clickBurst.current.resetTimer);
       stopVoice();
       offSettings();
       offClock();
@@ -124,11 +147,12 @@ export function App() {
     if (!ready) return;
     // Idle dialogue is local and timer-based; changing language or frequency restarts the interval.
     const interval = window.setInterval(() => {
-      const picked = pickDialogue('idle', settings.language);
+      const picked = pickDialogue('idle', settings.language, { petId: settings.petId, recentIds: recentDialogueIds.current });
+      rememberDialogue(picked.id);
       say(picked.text, picked.mood);
     }, Math.max(1, settings.chatFrequencyMinutes) * 60 * 1000);
     return () => window.clearInterval(interval);
-  }, [ready, settings.chatFrequencyMinutes, settings.language]);
+  }, [ready, settings.chatFrequencyMinutes, settings.language, settings.petId]);
 
   useEffect(() => {
     musicEnabledRef.current = settings.musicEnabled;
@@ -145,18 +169,25 @@ export function App() {
   }, [settings.language, settings.voiceEnabled, settings.volume]);
 
   const handlePetClick = () => {
-    const picked = pickDialogue('click', settings.language);
+    const picked = pickDialogue('click', settings.language, {
+      petId: settings.petId,
+      clickLevel: getClickLevel(),
+      recentIds: recentDialogueIds.current,
+    });
+    rememberDialogue(picked.id);
     say(picked.text, picked.mood);
   };
 
   const handleDragStart = () => {
-    const picked = pickDialogue('drag', settings.language);
+    const picked = pickDialogue('drag', settings.language, { petId: settings.petId, recentIds: recentDialogueIds.current });
+    rememberDialogue(picked.id);
     say(picked.text, picked.mood, 'dragged');
   };
 
   const handlePetDragStart = () => {
     if (activeAlarm) return;
-    const picked = pickDialogue('drag', settings.language);
+    const picked = pickDialogue('drag', settings.language, { petId: settings.petId, recentIds: recentDialogueIds.current });
+    rememberDialogue(picked.id);
     window.clearTimeout(hideSpeechTimer.current);
     setSpeech(picked.text);
     setMood(picked.mood);
