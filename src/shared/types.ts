@@ -59,6 +59,7 @@ export type SunpetApi = {
   saveSettings: (settings: AppSettings) => Promise<AppSettings>;
   setPetPosition: (position: AppSettings['petPosition']) => Promise<AppSettings>;
   movePetBy: (delta: PetMoveDelta) => Promise<AppSettings | undefined>;
+  setMousePassthrough: (enabled: boolean) => void;
   showSettings: () => Promise<void>;
   hideSettings: () => Promise<void>;
   closeApp: () => Promise<void>;

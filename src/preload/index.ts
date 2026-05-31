@@ -7,6 +7,7 @@ const api: SunpetApi & { onSettingsVisibility: (callback: (visible: boolean) => 
   saveSettings: (settings: AppSettings) => ipcRenderer.invoke('settings:save', settings),
   setPetPosition: (position: AppSettings['petPosition']) => ipcRenderer.invoke('pet:position', position),
   movePetBy: (delta: PetMoveDelta) => ipcRenderer.invoke('pet:move-by', delta),
+  setMousePassthrough: (enabled: boolean) => ipcRenderer.send('window:mouse-passthrough', enabled),
   showSettings: () => ipcRenderer.invoke('settings:show'),
   hideSettings: () => ipcRenderer.invoke('settings:hide'),
   closeApp: () => ipcRenderer.invoke('app:close'),

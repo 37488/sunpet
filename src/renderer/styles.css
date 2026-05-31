@@ -26,8 +26,8 @@ select {
   height: 260px;
   padding: 8px;
   color: #332400;
-  /* Empty window space remains draggable while controls opt out below. */
-  -webkit-app-region: drag;
+  /* Transparent space is mouse-through; the pet button handles dragging itself. */
+  -webkit-app-region: no-drag;
 }
 
 .speech {

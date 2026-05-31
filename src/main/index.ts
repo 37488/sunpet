@@ -7,6 +7,7 @@ import type { AppSettings, PetMoveDelta } from '../shared/types';
 
 let petWindow: BrowserWindow | null = null;
 let settingsVisible = false;
+let mousePassthrough = true;
 let positionSaveTimer: NodeJS.Timeout | undefined;
 
 const devServerUrl = process.env.VITE_DEV_SERVER_URL;
@@ -39,6 +40,7 @@ function createPetWindow() {
   // The higher level keeps the pet visible above most normal app windows on Windows.
   petWindow.setAlwaysOnTop(true, 'screen-saver');
   petWindow.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true });
+  petWindow.setIgnoreMouseEvents(true, { forward: true });
 
   if (devServerUrl) {
     void petWindow.loadURL(devServerUrl);
@@ -81,6 +83,12 @@ function clampWindowPosition(x: number, y: number) {
   };
 }
 
+function setMousePassthrough(enabled: boolean) {
+  if (!petWindow || petWindow.isDestroyed() || mousePassthrough === enabled) return;
+  mousePassthrough = enabled;
+  petWindow.setIgnoreMouseEvents(enabled, enabled ? { forward: true } : undefined);
+}
+
 app.whenReady().then(() => {
   createPetWindow();
   createTray(
@@ -104,6 +112,9 @@ app.whenReady().then(() => {
     const next = clampWindowPosition(windowX + Math.round(delta.x), windowY + Math.round(delta.y));
     petWindow.setPosition(next.x, next.y);
     return { ...getSettings(), petPosition: next };
+  });
+  ipcMain.on('window:mouse-passthrough', (_event, enabled: boolean) => {
+    setMousePassthrough(enabled);
   });
   ipcMain.handle('settings:show', () => {
     settingsVisible = true;

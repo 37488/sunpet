@@ -43,6 +43,7 @@ export function App() {
     language: defaultSettings.language,
     volume: defaultSettings.volume,
   });
+  const mousePassthroughRef = useRef(true);
 
   const stopVoice = () => {
     if ('speechSynthesis' in window) window.speechSynthesis.cancel();
@@ -140,6 +141,30 @@ export function App() {
       offSettings();
       offClock();
       offAlarm();
+    };
+  }, []);
+
+  useEffect(() => {
+    const setPassthrough = (enabled: boolean) => {
+      if (mousePassthroughRef.current === enabled) return;
+      mousePassthroughRef.current = enabled;
+      window.sunpet.setMousePassthrough(enabled);
+    };
+
+    const updateMousePassthrough = (event: MouseEvent) => {
+      const target = event.target instanceof Element ? event.target : null;
+      const isInteractiveUi = Boolean(target?.closest('.pet, .speech, .settings-panel'));
+      setPassthrough(!isInteractiveUi);
+    };
+
+    const handleMouseLeave = () => setPassthrough(true);
+
+    document.addEventListener('mousemove', updateMousePassthrough);
+    document.addEventListener('mouseleave', handleMouseLeave);
+    return () => {
+      document.removeEventListener('mousemove', updateMousePassthrough);
+      document.removeEventListener('mouseleave', handleMouseLeave);
+      setPassthrough(true);
     };
   }, []);
 
