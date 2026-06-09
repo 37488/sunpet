@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, type KeyboardEvent } from 'react';
 import { defaultSettings } from '../shared/defaultSettings';
 import type { Alarm, AppSettings, DialogueClickLevel, PetMood, PetState } from '../shared/types';
 import { pickDialogue } from './dialogues';
@@ -23,6 +23,25 @@ function pickSystemVoice(language: AppSettings['language']) {
   return voices.find((voice) => voice.lang === language) ?? voices.find((voice) => voice.lang.startsWith(languagePrefix)) ?? null;
 }
 
+function clipSpeech(text: string, maxLength = 220) {
+  return text.length > maxLength ? `${text.slice(0, maxLength)}...` : text;
+}
+
+function acceleratorFromKeyboardEvent(event: KeyboardEvent<HTMLInputElement>) {
+  const ignoredKeys = new Set(['Alt', 'Control', 'Meta', 'Shift', 'Tab', 'CapsLock']);
+  if (ignoredKeys.has(event.key)) return '';
+
+  const modifiers = [
+    event.ctrlKey ? 'Control' : '',
+    event.altKey ? 'Alt' : '',
+    event.shiftKey ? 'Shift' : '',
+    event.metaKey ? 'Meta' : '',
+  ].filter(Boolean);
+  const key = event.key.length === 1 ? event.key.toUpperCase() : event.key;
+  if (!modifiers.length || key === 'Process') return '';
+  return [...modifiers, key].join('+');
+}
+
 export function App() {
   const [settings, setSettings] = useState<AppSettings>(defaultSettings);
   const [ready, setReady] = useState(false);
@@ -33,7 +52,9 @@ export function App() {
   const [state, setState] = useState<PetState>('idle');
   const [now, setNow] = useState(formatTime(new Date()));
   const [alarmLabelDrafts, setAlarmLabelDrafts] = useState<Record<string, string>>({});
+  const [shortcutDraft, setShortcutDraft] = useState(defaultSettings.translation.shortcut);
   const composingAlarmLabels = useRef(new Set<string>());
+  const shortcutEditing = useRef(false);
   const hideSpeechTimer = useRef<number | undefined>(undefined);
   const recentDialogueIds = useRef<string[]>([]);
   const clickBurst = useRef<{ count: number; lastAt: number; resetTimer?: number }>({ count: 0, lastAt: 0 });
@@ -73,7 +94,7 @@ export function App() {
     setState(musicEnabledRef.current ? 'music' : 'idle');
   };
 
-  const say = (text: string, nextMood: PetMood = 'neutral', nextState: PetState = 'talking', persistent = false) => {
+  const say = (text: string, nextMood: PetMood = 'neutral', nextState: PetState = 'talking', persistent = false, durationMs = 4200) => {
     window.clearTimeout(hideSpeechTimer.current);
     setActiveAlarm(null);
     setSpeech(text);
@@ -82,7 +103,7 @@ export function App() {
     speakText(text);
     if (!persistent) {
       // Normal chat should be temporary; persistent events such as alarms must be user-dismissed.
-      hideSpeechTimer.current = window.setTimeout(clearSpeech, 4200);
+      hideSpeechTimer.current = window.setTimeout(clearSpeech, durationMs);
     }
   };
 
@@ -114,6 +135,7 @@ export function App() {
   useEffect(() => {
     void window.sunpet.getSettings().then((loaded) => {
       setSettings(loaded);
+      setShortcutDraft(loaded.translation.shortcut);
       setReady(true);
     });
 
@@ -131,6 +153,12 @@ export function App() {
       setState('alarm');
       speakText(`${payload.label || '提醒'} ${payload.time}`);
     });
+    const offTranslationResult = window.sunpet.onTranslationResult((payload) => {
+      say(`翻译：${clipSpeech(payload.translatedText)}`, 'happy', 'talking', false, 7800);
+    });
+    const offTranslationError = window.sunpet.onTranslationError((payload) => {
+      say(`翻译失败：${clipSpeech(payload.message, 120)}`, 'annoyed', 'talking', false, 5600);
+    });
     hideSpeechTimer.current = window.setTimeout(clearSpeech, 4200);
 
     return () => {
@@ -141,6 +169,8 @@ export function App() {
       offSettings();
       offClock();
       offAlarm();
+      offTranslationResult();
+      offTranslationError();
     };
   }, []);
 
@@ -192,6 +222,10 @@ export function App() {
     };
     if (!settings.voiceEnabled) stopVoice();
   }, [settings.language, settings.voiceEnabled, settings.volume]);
+
+  useEffect(() => {
+    if (!shortcutEditing.current) setShortcutDraft(settings.translation.shortcut);
+  }, [settings.translation.shortcut]);
 
   const handlePetClick = () => {
     const picked = pickDialogue('click', settings.language, {
@@ -254,6 +288,37 @@ export function App() {
 
   const removeAlarm = (id: string) => {
     void saveSettings({ ...settings, alarms: settings.alarms.filter((alarm) => alarm.id !== id) });
+  };
+
+  const saveTranslation = (translation: Partial<AppSettings['translation']>) => {
+    void saveSettings({ ...settings, translation: { ...settings.translation, ...translation } });
+  };
+
+  const commitShortcutDraft = (shortcut = shortcutDraft) => {
+    const nextShortcut = shortcut.trim() || defaultSettings.translation.shortcut;
+    setShortcutDraft(nextShortcut);
+    saveTranslation({ shortcut: nextShortcut });
+  };
+
+  const handleShortcutKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
+    if (event.key === 'Enter') {
+      event.preventDefault();
+      commitShortcutDraft();
+      event.currentTarget.blur();
+      return;
+    }
+    if (event.key === 'Escape') {
+      event.preventDefault();
+      setShortcutDraft(settings.translation.shortcut);
+      event.currentTarget.blur();
+      return;
+    }
+
+    const shortcut = acceleratorFromKeyboardEvent(event);
+    if (!shortcut) return;
+    event.preventDefault();
+    setShortcutDraft(shortcut);
+    commitShortcutDraft(shortcut);
   };
 
   if (!ready) return null;
@@ -330,6 +395,129 @@ export function App() {
             <input type="checkbox" checked={settings.voiceEnabled} onChange={(event) => void saveSettings({ ...settings, voiceEnabled: event.target.checked })} />
             语音朗读
           </label>
+
+          <section className="settings-section">
+            <header>
+              <strong>划词翻译</strong>
+            </header>
+
+            <label className="checkbox-row">
+              <input type="checkbox" checked={settings.translation.enabled} onChange={(event) => saveTranslation({ enabled: event.target.checked })} />
+              启用翻译
+            </label>
+
+            <label>
+              触发方式
+              <select
+                value={settings.translation.triggerMode}
+                onChange={(event) => saveTranslation({ triggerMode: event.target.value as AppSettings['translation']['triggerMode'] })}
+              >
+                <option value="ctrl-long-press">长按 Ctrl</option>
+                <option value="shortcut">组合快捷键</option>
+              </select>
+            </label>
+
+            {settings.translation.triggerMode === 'shortcut' && (
+              <label>
+                快捷键
+                <input
+                  value={shortcutDraft}
+                  placeholder="CommandOrControl+Alt+T"
+                  onFocus={() => {
+                    shortcutEditing.current = true;
+                  }}
+                  onBlur={() => {
+                    shortcutEditing.current = false;
+                    commitShortcutDraft();
+                  }}
+                  onChange={(event) => setShortcutDraft(event.target.value)}
+                  onKeyDown={handleShortcutKeyDown}
+                />
+              </label>
+            )}
+
+            <label>
+              源语言
+              <select value={settings.translation.sourceLanguage} onChange={(event) => saveTranslation({ sourceLanguage: event.target.value })}>
+                <option value="auto">自动检测</option>
+                <option value="zh">中文</option>
+                <option value="en">English</option>
+                <option value="ja">日本語</option>
+                <option value="ko">한국어</option>
+              </select>
+            </label>
+
+            <label>
+              目标语言
+              <select value={settings.translation.targetLanguage} onChange={(event) => saveTranslation({ targetLanguage: event.target.value })}>
+                <option value="zh">中文</option>
+                <option value="en">English</option>
+                <option value="ja">日本語</option>
+                <option value="ko">한국어</option>
+              </select>
+            </label>
+
+            <label>
+              翻译来源
+              <select value={settings.translation.provider} onChange={(event) => saveTranslation({ provider: event.target.value as AppSettings['translation']['provider'] })}>
+                <option value="baidu">百度翻译</option>
+                <option value="openai-compatible">OpenAI-compatible</option>
+              </select>
+            </label>
+
+            {settings.translation.provider === 'baidu' && (
+              <>
+                <label>
+                  百度 appId
+                  <input
+                    value={settings.translation.baidu.appId}
+                    onChange={(event) => saveTranslation({ baidu: { ...settings.translation.baidu, appId: event.target.value } })}
+                  />
+                </label>
+                <label>
+                  百度 secretKey
+                  <input
+                    type="password"
+                    value={settings.translation.baidu.secretKey}
+                    onChange={(event) => saveTranslation({ baidu: { ...settings.translation.baidu, secretKey: event.target.value } })}
+                  />
+                </label>
+              </>
+            )}
+
+            {settings.translation.provider === 'openai-compatible' && (
+              <>
+                <label>
+                  Base URL
+                  <input
+                    value={settings.translation.openaiCompatible.baseUrl}
+                    onChange={(event) =>
+                      saveTranslation({ openaiCompatible: { ...settings.translation.openaiCompatible, baseUrl: event.target.value } })
+                    }
+                  />
+                </label>
+                <label>
+                  API Key
+                  <input
+                    type="password"
+                    value={settings.translation.openaiCompatible.apiKey}
+                    onChange={(event) =>
+                      saveTranslation({ openaiCompatible: { ...settings.translation.openaiCompatible, apiKey: event.target.value } })
+                    }
+                  />
+                </label>
+                <label>
+                  Model
+                  <input
+                    value={settings.translation.openaiCompatible.model}
+                    onChange={(event) =>
+                      saveTranslation({ openaiCompatible: { ...settings.translation.openaiCompatible, model: event.target.value } })
+                    }
+                  />
+                </label>
+              </>
+            )}
+          </section>
 
           <section className="alarms">
             <header>

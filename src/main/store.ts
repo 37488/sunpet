@@ -14,12 +14,43 @@ const store = new Store<StoreShape>({
 
 export function getSettings(): AppSettings {
   // Merge defaults on read so newly added settings get sane values for existing users.
-  return { ...defaultSettings, ...store.get('settings') };
+  const saved = store.get('settings');
+  return {
+    ...defaultSettings,
+    ...saved,
+    translation: {
+      ...defaultSettings.translation,
+      ...saved.translation,
+      baidu: {
+        ...defaultSettings.translation.baidu,
+        ...saved.translation?.baidu,
+      },
+      openaiCompatible: {
+        ...defaultSettings.translation.openaiCompatible,
+        ...saved.translation?.openaiCompatible,
+      },
+    },
+  };
 }
 
 export function saveSettings(settings: AppSettings): AppSettings {
   // Save the normalized shape back to disk to keep persisted data aligned with current defaults.
-  const next = { ...defaultSettings, ...settings };
+  const next = {
+    ...defaultSettings,
+    ...settings,
+    translation: {
+      ...defaultSettings.translation,
+      ...settings.translation,
+      baidu: {
+        ...defaultSettings.translation.baidu,
+        ...settings.translation.baidu,
+      },
+      openaiCompatible: {
+        ...defaultSettings.translation.openaiCompatible,
+        ...settings.translation.openaiCompatible,
+      },
+    },
+  };
   store.set('settings', next);
   return next;
 }

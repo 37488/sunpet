@@ -1,14 +1,19 @@
-import { app, BrowserWindow, ipcMain, screen } from 'electron';
+import { app, BrowserWindow, globalShortcut, ipcMain, screen } from 'electron';
 import path from 'path';
 import { createTray } from './tray';
 import { getSettings, saveSettings } from './store';
 import { startScheduler, stopScheduler } from './scheduler';
+import { readSelectedTextFromForegroundApp } from './selection';
+import { registerTranslationTrigger } from './translationTrigger';
+import { translateText } from './translator';
 import type { AppSettings, PetMoveDelta } from '../shared/types';
 
 let petWindow: BrowserWindow | null = null;
 let settingsVisible = false;
 let mousePassthrough = true;
 let positionSaveTimer: NodeJS.Timeout | undefined;
+let stopTranslationTrigger: (() => void) | undefined;
+let translationInFlight = false;
 
 const devServerUrl = process.env.VITE_DEV_SERVER_URL;
 
@@ -89,6 +94,34 @@ function setMousePassthrough(enabled: boolean) {
   petWindow.setIgnoreMouseEvents(enabled, enabled ? { forward: true } : undefined);
 }
 
+function sendTranslationError(message: string) {
+  petWindow?.webContents.send('translation:error', { message });
+}
+
+async function translateCurrentSelection() {
+  if (translationInFlight) return;
+  const settings = getSettings();
+  if (!settings.translation.enabled) return;
+
+  translationInFlight = true;
+  try {
+    const selectedText = await readSelectedTextFromForegroundApp();
+    const result = await translateText(selectedText, settings);
+    petWindow?.webContents.send('translation:result', result);
+  } catch (error) {
+    sendTranslationError(error instanceof Error ? error.message : '翻译失败。');
+  } finally {
+    translationInFlight = false;
+  }
+}
+
+function configureTranslationTrigger() {
+  stopTranslationTrigger?.();
+  stopTranslationTrigger = registerTranslationTrigger(getSettings().translation, () => {
+    void translateCurrentSelection();
+  });
+}
+
 app.whenReady().then(() => {
   createPetWindow();
   createTray(
@@ -99,10 +132,15 @@ app.whenReady().then(() => {
     () => app.quit()
   );
   startScheduler(() => petWindow);
+  configureTranslationTrigger();
 
   // Keep all Electron and persistence access behind IPC so React stays browser-only.
   ipcMain.handle('settings:get', () => getSettings());
-  ipcMain.handle('settings:save', (_event, settings: AppSettings) => saveSettings(settings));
+  ipcMain.handle('settings:save', (_event, settings: AppSettings) => {
+    const saved = saveSettings(settings);
+    configureTranslationTrigger();
+    return saved;
+  });
   ipcMain.handle('pet:position', (_event, position: AppSettings['petPosition']) => {
     return saveSettings({ ...getSettings(), petPosition: position });
   });
@@ -134,5 +172,7 @@ app.on('window-all-closed', () => {
 app.on('before-quit', () => {
   if (positionSaveTimer) clearTimeout(positionSaveTimer);
   savePetWindowPosition();
+  stopTranslationTrigger?.();
+  globalShortcut.unregisterAll();
   stopScheduler();
 });

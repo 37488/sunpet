@@ -1,5 +1,5 @@
 import { contextBridge, ipcRenderer } from 'electron';
-import type { AlarmPayload, AppSettings, ClockPayload, PetMoveDelta, SunpetApi } from '../shared/types';
+import type { AlarmPayload, AppSettings, ClockPayload, PetMoveDelta, SunpetApi, TranslationErrorPayload, TranslationResultPayload } from '../shared/types';
 
 // This is the only renderer-visible bridge to Electron APIs; keep it narrow and typed.
 const api: SunpetApi & { onSettingsVisibility: (callback: (visible: boolean) => void) => () => void } = {
@@ -20,6 +20,16 @@ const api: SunpetApi & { onSettingsVisibility: (callback: (visible: boolean) => 
     const listener = (_event: Electron.IpcRendererEvent, payload: AlarmPayload) => callback(payload);
     ipcRenderer.on('alarm:ring', listener);
     return () => ipcRenderer.off('alarm:ring', listener);
+  },
+  onTranslationResult: (callback: (payload: TranslationResultPayload) => void) => {
+    const listener = (_event: Electron.IpcRendererEvent, payload: TranslationResultPayload) => callback(payload);
+    ipcRenderer.on('translation:result', listener);
+    return () => ipcRenderer.off('translation:result', listener);
+  },
+  onTranslationError: (callback: (payload: TranslationErrorPayload) => void) => {
+    const listener = (_event: Electron.IpcRendererEvent, payload: TranslationErrorPayload) => callback(payload);
+    ipcRenderer.on('translation:error', listener);
+    return () => ipcRenderer.off('translation:error', listener);
   },
   onSettingsVisibility: (callback: (visible: boolean) => void) => {
     const listener = (_event: Electron.IpcRendererEvent, visible: boolean) => callback(visible);

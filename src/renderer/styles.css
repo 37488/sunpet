@@ -326,6 +326,12 @@ select {
   align-items: center;
 }
 
+.settings-section {
+  margin-top: 12px;
+  padding-top: 10px;
+  border-top: 1px solid rgba(115, 89, 0, 0.35);
+}
+
 .alarms {
   margin-top: 12px;
 }

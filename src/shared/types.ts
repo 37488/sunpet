@@ -15,6 +15,29 @@ export type Alarm = {
   enabled: boolean;
 };
 
+export type TranslationProvider = 'baidu' | 'openai-compatible';
+
+export type TranslationTriggerMode = 'ctrl-long-press' | 'shortcut';
+
+export type TranslationSettings = {
+  enabled: boolean;
+  provider: TranslationProvider;
+  sourceLanguage: 'auto' | string;
+  targetLanguage: string;
+  triggerMode: TranslationTriggerMode;
+  shortcut: string;
+  ctrlLongPressMs: number;
+  baidu: {
+    appId: string;
+    secretKey: string;
+  };
+  openaiCompatible: {
+    baseUrl: string;
+    apiKey: string;
+    model: string;
+  };
+};
+
 export type AppSettings = {
   language: 'zh-CN' | 'en-US';
   petId: PetId;
@@ -23,6 +46,7 @@ export type AppSettings = {
   musicEnabled: boolean;
   voiceEnabled: boolean;
   volume: number;
+  translation: TranslationSettings;
   petPosition: { x: number; y: number };
   alarms: Alarm[];
 };
@@ -54,6 +78,16 @@ export type AlarmPayload = {
   time: string;
 };
 
+export type TranslationResultPayload = {
+  sourceText: string;
+  translatedText: string;
+  provider: TranslationProvider;
+};
+
+export type TranslationErrorPayload = {
+  message: string;
+};
+
 export type SunpetApi = {
   getSettings: () => Promise<AppSettings>;
   saveSettings: (settings: AppSettings) => Promise<AppSettings>;
@@ -65,4 +99,6 @@ export type SunpetApi = {
   closeApp: () => Promise<void>;
   onClock: (callback: (payload: ClockPayload) => void) => () => void;
   onAlarm: (callback: (payload: AlarmPayload) => void) => () => void;
+  onTranslationResult: (callback: (payload: TranslationResultPayload) => void) => () => void;
+  onTranslationError: (callback: (payload: TranslationErrorPayload) => void) => () => void;
 };
