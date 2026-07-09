@@ -42,6 +42,9 @@ select {
   border-radius: 16px 16px 16px 6px;
   background: rgba(255, 252, 220, 0.96);
   box-shadow: 0 8px 18px rgba(60, 40, 0, 0.18);
+  user-select: text;
+  -webkit-user-select: text;
+  cursor: text;
   animation: bubble-in 180ms ease-out;
 }
 
