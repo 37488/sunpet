@@ -4,6 +4,7 @@ export const defaultSettings: AppSettings = {
   language: 'zh-CN',
   petId: 'starlit-mira',
   chatFrequencyMinutes: 3,
+  launchAtStartup: false,
   clockEnabled: true,
   musicEnabled: false,
   voiceEnabled: false,

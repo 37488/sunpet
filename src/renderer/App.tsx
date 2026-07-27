@@ -382,6 +382,15 @@ export function App() {
           </label>
 
           <label className="checkbox-row">
+            <input
+              type="checkbox"
+              checked={settings.launchAtStartup}
+              onChange={(event) => void saveSettings({ ...settings, launchAtStartup: event.target.checked })}
+            />
+            开机自动启动
+          </label>
+
+          <label className="checkbox-row">
             <input type="checkbox" checked={settings.clockEnabled} onChange={(event) => void saveSettings({ ...settings, clockEnabled: event.target.checked })} />
             整点报时
           </label>

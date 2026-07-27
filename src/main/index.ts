@@ -16,6 +16,17 @@ let stopTranslationTrigger: (() => void) | undefined;
 let translationInFlight = false;
 
 const devServerUrl = process.env.VITE_DEV_SERVER_URL;
+const hasSingleInstanceLock = app.requestSingleInstanceLock();
+
+if (!hasSingleInstanceLock) app.quit();
+
+function configureLaunchAtStartup(enabled: boolean) {
+  if (process.platform !== 'win32' || !app.isPackaged) return;
+
+  // Portable builds expose their original executable path; process.execPath points at the temporary unpacked copy.
+  const executablePath = process.env.PORTABLE_EXECUTABLE_FILE || process.execPath;
+  app.setLoginItemSettings({ openAtLogin: enabled, path: executablePath });
+}
 
 function createPetWindow() {
   const settings = getSettings();
@@ -122,7 +133,15 @@ function configureTranslationTrigger() {
   });
 }
 
-app.whenReady().then(() => {
+app.on('second-instance', () => {
+  if (!petWindow || petWindow.isDestroyed()) return;
+  if (petWindow.isMinimized()) petWindow.restore();
+  petWindow.show();
+  petWindow.focus();
+});
+
+if (hasSingleInstanceLock) app.whenReady().then(() => {
+  configureLaunchAtStartup(getSettings().launchAtStartup);
   createPetWindow();
   createTray(
     () => {
@@ -138,6 +157,7 @@ app.whenReady().then(() => {
   ipcMain.handle('settings:get', () => getSettings());
   ipcMain.handle('settings:save', (_event, settings: AppSettings) => {
     const saved = saveSettings(settings);
+    configureLaunchAtStartup(saved.launchAtStartup);
     configureTranslationTrigger();
     return saved;
   });

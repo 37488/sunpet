@@ -42,6 +42,7 @@ export type AppSettings = {
   language: 'zh-CN' | 'en-US';
   petId: PetId;
   chatFrequencyMinutes: number;
+  launchAtStartup: boolean;
   clockEnabled: boolean;
   musicEnabled: boolean;
   voiceEnabled: boolean;
