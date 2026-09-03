@@ -9,8 +9,16 @@ type BaiduTranslateResponse = {
 
 type OpenAICompatibleResponse = {
   error?: { message?: string };
-  choices?: Array<{ message?: { content?: string } }>;
+  choices?: Array<{ message?: { content?: string; reasoning_content?: string } }>;
 };
+
+// Reasoning/thinking models wrap their chain-of-thought in tags like <think>...
+// and may leak them into content, so strip any <think> block before using the text.
+function stripReasoningBlocks(text: string) {
+  return text
+    .replace(/<think>[\s\S]*?(?:<\/think>|$)/gi, '')
+    .trim();
+}
 
 const baiduLanguageMap: Record<string, string> = {
   'zh-CN': 'zh',
@@ -99,7 +107,7 @@ async function translateWithOpenAICompatible(text: string, settings: AppSettings
       messages: [
         {
           role: 'system',
-          content: 'You are a precise translation engine. Return only the translated text.',
+          content: 'You are a precise translation engine. Return only the translated text with no explanations, no reasoning, and no <think> or </think> tags.',
         },
         {
           role: 'user',
@@ -113,8 +121,9 @@ async function translateWithOpenAICompatible(text: string, settings: AppSettings
     throw new Error(payload.error?.message || `OpenAI-compatible 翻译请求失败：${response.status}`);
   }
 
-  const translated = payload.choices?.[0]?.message?.content?.trim();
-  if (!translated) throw new Error('OpenAI-compatible 没有返回译文。');
+  const content = payload.choices?.[0]?.message?.content ?? '';
+  const translated = stripReasoningBlocks(content).trim();
+  if (!translated) throw new Error('OpenAI-compatible 没有返回译文（可能只返回了思考过程）。');
   return translated;
 }
 
